@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <base href="./">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ManDaLa Radio - Thánh Địa Cảm Xúc</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a1f;
+            color: #e8e4df;
+            font-family: 'Cormorant Garamond', serif;
+            overflow-x: hidden;
+            line-height: 1.7;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 0;
+            background: radial-gradient(ellipse at center top, #1a1a3e 0%, #0a0a1f 50%, #000000 100%);
+        }
+
+        .loading-screen {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #0a0a1f 0%, #1a1442 50%, #0a0a1f 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 1;
+            transition: opacity 1.2s ease-out;
+        }
+
+        .loading-screen.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loader-mandala {
+            width: 100px;
+            height: 100px;
+            border: 2px solid rgba(168, 162, 255, 0.2);
+            border-top: 2px solid #a8a2ff;
+            border-radius: 50%;
+            animation: spin 2s linear infinite, pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        #loader-content {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #loader-content:hover {
+            transform: scale(1.05);
+        }
+
+        #click-hint {
+            animation: fadeInPulse 2s ease-in-out forwards, float 3s ease-in-out infinite;
+        }
+
+        @keyframes fadeInPulse {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        .loader-click-effect {
+            position: absolute;
+            border: 2px solid rgba(168, 162, 255, 0.8);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: ripple 1s ease-out;
+        }
+
+        @keyframes ripple {
+            0% {
+                width: 0;
+                height: 0;
+                opacity: 1;
+            }
+            100% {
+                width: 300px;
+                height: 300px;
+                opacity: 0;
+            }
+        }
+
+        .content-layer {
+            position: relative;
+            z-index: 1;
+        }
+
+        .glass-morphism {
+            background: rgba(26, 26, 62, 0.4);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(168, 162, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .glow-text {
+            text-shadow: 0 0 20px rgba(168, 162, 255, 0.5), 0 0 40px rgba(168, 162, 255, 0.2);
+        }
+
+        .breathe {
+            animation: breathe 4s ease-in-out infinite;
+        }
+
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.05); opacity: 1; }
+        }
+
+        .cassette-container {
+            perspective: 1000px;
+        }
+
+        .cassette-tape {
+            width: 200px;
+            height: 120px;
+            background: linear-gradient(135deg, #2a2a4e 0%, #1a1a3e 100%);
+            border-radius: 8px;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            transform-style: preserve-3d;
+        }
+
+        .cassette-reel {
+            width: 40px;
+            height: 40px;
+            background: radial-gradient(circle, #4a4a6e 30%, #2a2a4e 100%);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .cassette-reel.left { left: 20px; }
+        .cassette-reel.right { right: 20px; }
+
+        .reel-spinning {
+            animation: reelSpin 2s linear infinite;
+        }
+
+        @keyframes reelSpin {
+            0% { transform: translateY(-50%) rotate(0deg); }
+            100% { transform: translateY(-50%) rotate(360deg); }
+        }
+
+        .ritual-input {
+            background: rgba(26, 26, 62, 0.3);
+            border: 1px solid rgba(168, 162, 255, 0.3);
+            color: #e8e4df;
+            padding: 16px 24px;
+            border-radius: 12px;
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .ritual-input:focus {
+            outline: none;
+            border-color: rgba(168, 162, 255, 0.6);
+            background: rgba(26, 26, 62, 0.5);
+            box-shadow: 0 0 20px rgba(168, 162, 255, 0.2);
+        }
+
+        .ritual-input::placeholder {
+            color: rgba(232, 228, 223, 0.4);
+            font-style: italic;
+        }
+
+        .ritual-button {
+            background: linear-gradient(135deg, rgba(168, 162, 255, 0.3) 0%, rgba(138, 132, 225, 0.3) 100%);
+            border: 1px solid rgba(168, 162, 255, 0.5);
+            color: #e8e4df;
+            padding: 16px 48px;
+            border-radius: 12px;
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 18px;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            text-transform: uppercase;
+        }
+
+        .ritual-button:hover {
+            background: linear-gradient(135deg, rgba(168, 162, 255, 0.5) 0%, rgba(138, 132, 225, 0.5) 100%);
+            box-shadow: 0 0 30px rgba(168, 162, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .scroll-indicator {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .particle-trail {
+            position: fixed;
+            width: 4px;
+            height: 4px;
+            background: radial-gradient(circle, rgba(168, 162, 255, 0.8) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9998;
+            animation: fadeOut 1s ease-out forwards;
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                transform: scale(0);
+            }
+        }
+
+        .service-card {
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .service-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            border-color: rgba(168, 162, 255, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .cassette-tape {
+                width: 150px;
+                height: 90px;
+            }
+            .cassette-reel {
+                width: 30px;
+                height: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loader">
+        <div class="text-center" id="loader-content">
+            <!-- <div class="loader-mandala mb-6"></div> -->
+            <h2 class="text-2xl font-light tracking-[0.3em] text-purple-200">MANDALA</h2>
+            <p class="text-sm mt-3 opacity-60 uppercase tracking-[0.2em]" id="loader-text">Đang mở cánh cổng...</p>
+            <div class="mt-8 opacity-0" id="click-hint" style="animation-delay: 2s;">
+                <p class="text-lg italic text-purple-300">✨ Click để vào thánh địa ✨</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Three.js Canvas -->
+    <div id="canvas-container"></div>
+
+    <!-- Content Layer -->
+    <div class="content-layer">
+        
+        <!-- Navigation -->
+        <nav class="fixed w-full px-6 md:px-12 py-6 flex justify-between items-center z-50 backdrop-blur-sm">
+            <div class="text-2xl tracking-tight font-light glow-text">ManDaLa</div>
+            <div class="hidden md:flex space-x-8 text-sm uppercase tracking-[0.15em] opacity-70">
+                <a href="#sound" class="hover:opacity-100 hover:text-purple-300 transition-all duration-300">Thanh Âm</a>
+                <a href="#galaxy" class="hover:opacity-100 hover:text-purple-300 transition-all duration-300">Ngân Hà</a>
+                <a href="#healing" class="hover:opacity-100 hover:text-purple-300 transition-all duration-300">Chữa Lành</a>
+                <a href="#ritual" class="hover:opacity-100 hover:text-purple-300 transition-all duration-300">Nghi Thức</a>
+            </div>
+        </nav>
+
+        <!-- Audio Player & Mute Button -->
+<audio id="ambient-audio" loop>
+    <source src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3" type="audio/mpeg">
+</audio>
+
+<button id="mute-toggle" class="fixed bottom-8 right-8 z-50 glass-morphism rounded-full p-4 hover:scale-110 transition-all duration-300 group">
+    <svg id="sound-icon" class="w-6 h-6 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+    </svg>
+    <svg id="mute-icon" class="w-6 h-6 text-purple-300 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path>
+    </svg>
+</button>
+
+        <!-- Hero Section: The Sound -->
+        <section id="sound" class="min-h-screen flex flex-col justify-center items-center text-center px-6 relative">
+            <div class="max-w-4xl">
+                <div class="mb-8 opacity-60 text-sm uppercase tracking-[0.3em]" data-scroll-reveal="fade-up">
+                    22:00 — 01:00
+                </div>
+                <h1 class="text-5xl md:text-7xl lg:text-8xl font-light mb-8 glow-text leading-tight" data-scroll-reveal="fade-up" data-delay="0.2">
+                    Thanh Âm Vô Tận,<br>
+                    <span class="italic text-purple-300 font-normal">Tình Yêu Vô Biên</span>
+                </h1>
+                <p class="text-xl md:text-2xl opacity-70 leading-relaxed font-light italic max-w-2xl mx-auto" data-scroll-reveal="fade-up" data-delay="0.4">
+                    Nơi những mảnh vỡ cảm xúc được ôm ấp bởi âm nhạc và sự dịu dàng. Một thánh địa số cho những tâm hồn đêm khuya.
+                </p>
+                <div class="mt-16 scroll-indicator" data-scroll-reveal="fade-up" data-delay="0.6">
+                    <div class="w-px h-20 bg-gradient-to-b from-purple-300 to-transparent mx-auto opacity-40"></div>
+                    <div class="text-xs mt-4 opacity-50 uppercase tracking-[0.2em]">Cuộn xuống</div>
+                </div>
+            </div>
+
+            <!-- Emotion Core Sphere (Three.js will render here) -->
+            <div id="emotion-sphere" class="absolute inset-0 pointer-events-none"></div>
+        </section>
+
+        <!-- Memory Galaxy Section -->
+        <section id="galaxy" class="min-h-screen flex items-center justify-center px-6 py-20 relative">
+            <div class="max-w-6xl w-full">
+                <div class="text-center mb-16" data-scroll-reveal="fade-up">
+                    <span class="text-xs uppercase tracking-[0.3em] text-purple-300 opacity-80">The Sight</span>
+                    <h2 class="text-5xl md:text-6xl font-light mt-4 mb-6 glow-text">Dải Ngân Hà Ký Ức</h2>
+                    <p class="text-xl opacity-60 italic max-w-2xl mx-auto leading-relaxed">
+                        Mỗi hạt sao lấp lánh là một câu chuyện được gửi gắm. Di chuyển chuột để cảm nhận những rung cảm tập thể.
+                    </p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-8 mt-12">
+                    <div class="glass-morphism rounded-3xl p-8 service-card" data-scroll-reveal="fade-right">
+                        <div class="text-6xl mb-4 opacity-40">✨</div>
+                        <h3 class="text-2xl mb-4 font-light text-purple-200">Ký Ức Sống</h3>
+                        <p class="opacity-70 leading-relaxed">
+                            Những khoảnh khắc được lưu giữ không chỉ bằng dữ liệu, mà bằng cảm xúc. Chạm vào và cảm nhận.
+                        </p>
+                    </div>
+
+                    <div class="glass-morphism rounded-3xl p-8 service-card" data-scroll-reveal="fade-left">
+                        <div class="text-6xl mb-4 opacity-40">🌌</div>
+                        <h3 class="text-2xl mb-4 font-light text-purple-200">Kết Nối Vô Hình</h3>
+                        <p class="opacity-70 leading-relaxed">
+                            Bạn không cô đơn. Hàng ngàn tâm hồn khác cũng đang tìm kiếm sự an ủi trong đêm tối này.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Interactive Galaxy Canvas Area -->
+                <div id="galaxy-interactive" class="mt-12 h-64 glass-morphism rounded-3xl relative overflow-hidden" data-scroll-reveal="fade-up">
+                    <div class="absolute inset-0 flex items-center justify-center text-sm opacity-40 uppercase tracking-[0.2em] pointer-events-none">
+                        Di chuyển chuột để khám phá
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- The Rewind Feature Section -->
+        <section id="healing" class="min-h-screen flex items-center justify-center px-6 py-20 bg-gradient-to-b from-transparent via-black/30 to-transparent">
+            <div class="max-w-5xl w-full">
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <div data-scroll-reveal="fade-right">
+                        <span class="text-xs uppercase tracking-[0.3em] text-purple-300 opacity-80">The Healing</span>
+                        <h2 class="text-5xl md:text-6xl font-light mt-4 mb-8 glow-text leading-tight">
+                            Tua Ngược<br>Thời Gian
+                        </h2>
+                        <p class="text-xl opacity-70 leading-relaxed mb-6">
+                            Khi thế giới bên ngoài ngắt kết nối, ManDaLa mở ra cánh cổng Offline. 
+                        </p>
+                        <p class="text-lg opacity-60 italic leading-relaxed">
+                            Nơi bạn có thể chạm vào những rung cảm cũ, nghe lại những lời chưa kịp nói, và chữa lành những vết thương thầm lặng.
+                        </p>
+                    </div>
+
+                    <div class="cassette-container flex justify-center" data-scroll-reveal="fade-left">
+                        <div class="cassette-tape breathe">
+                            <div class="cassette-reel left reel-spinning"></div>
+                            <div class="cassette-reel right reel-spinning"></div>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <div class="w-32 h-12 bg-black/30 rounded-md"></div>
+                            </div>
+                            <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-xs opacity-50 uppercase tracking-widest">
+                                ManDaLa Mix
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Service Cards -->
+                <div class="grid md:grid-cols-3 gap-6 mt-20">
+                    <div class="glass-morphism rounded-2xl p-6 text-center service-card" data-scroll-reveal="fade-up" data-delay="0">
+                        <div class="text-4xl mb-3 opacity-50">🎵</div>
+                        <h4 class="text-xl font-light mb-2 text-purple-200">Playlist Cảm Xúc</h4>
+                        <p class="text-sm opacity-60 leading-relaxed">Được tạo dựa trên trạng thái tâm hồn của bạn</p>
+                    </div>
+
+                    <div class="glass-morphism rounded-2xl p-6 text-center service-card" data-scroll-reveal="fade-up" data-delay="0.2">
+                        <div class="text-4xl mb-3 opacity-50">💌</div>
+                        <h4 class="text-xl font-light mb-2 text-purple-200">Thư Đêm Khuya</h4>
+                        <p class="text-sm opacity-60 leading-relaxed">Gửi lời nhắn cho chính mình trong tương lai</p>
+                    </div>
+
+                    <div class="glass-morphism rounded-2xl p-6 text-center service-card" data-scroll-reveal="fade-up" data-delay="0.4">
+                        <div class="text-4xl mb-3 opacity-50">🕯️</div>
+                        <h4 class="text-xl font-light mb-2 text-purple-200">Nghi Thức An Lành</h4>
+                        <p class="text-sm opacity-60 leading-relaxed">Kết thúc mỗi ngày với sự nhẹ nhàng</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Signature Ritual Section -->
+        <section id="ritual" class="min-h-screen flex items-center justify-center px-6 py-20">
+            <div class="max-w-2xl w-full">
+                <div class="text-center mb-12" data-scroll-reveal="fade-up">
+                    <span class="text-xs uppercase tracking-[0.3em] text-purple-300 opacity-80">The Eternal Love</span>
+                    <h2 class="text-5xl md:text-6xl font-light mt-4 mb-6 glow-text">Niêm Phong Cảm Xúc</h2>
+                    <p class="text-lg opacity-60 italic leading-relaxed max-w-xl mx-auto">
+                        Hãy để ManDaLa giữ lại những gì bạn đang cảm nhận. An toàn, dịu dàng, và trang nghiêm.
+                    </p>
+                </div>
+
+                <div class="glass-morphism rounded-3xl p-8 md:p-12" data-scroll-reveal="fade-up" data-delay="0.2">
+                    <form class="space-y-6" id="ritual-form">
+                        <div>
+                            <label class="block text-sm uppercase tracking-[0.2em] opacity-60 mb-3">Tên của bạn (tùy chọn)</label>
+                            <input type="text" class="ritual-input" placeholder="Hoặc để trống nếu muốn ẩn danh...">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm uppercase tracking-[0.2em] opacity-60 mb-3">Điều bạn muốn gửi gắm</label>
+                            <textarea class="ritual-input" rows="6" placeholder="Viết những gì trong lòng bạn. Không ai phán xét. Chỉ có sự lắng nghe."></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm uppercase tracking-[0.2em] opacity-60 mb-3">Tâm trạng hiện tại</label>
+                            <select class="ritual-input">
+                                <option>Chọn cảm xúc...</option>
+                                <option>😌 Bình yên</option>
+                                <option>💙 Buồn bã</option>
+                                <option>💜 Cô đơn</option>
+                                <option>✨ Hy vọng</option>
+                                <option>🌙 Hoài niệm</option>
+                                <option>🕊️ Nhẹ nhàng</option>
+                            </select>
+                        </div>
+
+                        <div class="pt-4 text-center">
+                            <button type="submit" class="ritual-button">
+                                Niêm Phong
+                            </button>
+                            <p class="text-xs opacity-40 mt-4 italic">Cảm xúc của bạn được bảo vệ bởi mật mã yêu thương</p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="py-16 px-6 text-center border-t border-purple-900/20">
+            <div class="max-w-4xl mx-auto">
+                <div class="text-3xl font-light mb-4 glow-text">ManDaLa Radio</div>
+                <p class="text-sm opacity-50 italic mb-8 leading-relaxed">
+                    "Trong đêm tối nhất, ánh sáng dịu dàng nhất sẽ dẫn lối. Chúng tôi ở đây, mãi mãi."
+                </p>
+                
+                <div class="flex justify-center space-x-8 mb-8 text-sm opacity-60">
+                    <a href="#" class="hover:text-purple-300 transition-colors">Về Chúng Tôi</a>
+                    <a href="#" class="hover:text-purple-300 transition-colors">Chính Sách</a>
+                    <a href="#" class="hover:text-purple-300 transition-colors">Liên Hệ</a>
+                </div>
+
+                <div class="text-xs opacity-40 uppercase tracking-[0.2em]">
+                    © 2025 ManDaLa — Safe, Soft, Ceremonial
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    <script>
+        // Three.js Scene Setup
+        let scene, camera, renderer;
+        let emotionSphere, galaxyParticles, backgroundStars;
+        let mouseX = 0, mouseY = 0;
+        let targetMouseX = 0, targetMouseY = 0;
+
+        function initThree() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x0a0a1f, 0.0003);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.z = 600;
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true, 
+                alpha: true,
+                powerPreference: "high-performance"
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // Background Stars (Memory Galaxy)
+            createBackgroundStars();
+
+            // Hero Emotion Sphere
+            createEmotionSphere();
+
+            // Interactive Galaxy Particles
+            createGalaxyParticles();
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xa8a2ff, 0.3);
+            scene.add(ambientLight);
+
+            const pointLight = new THREE.PointLight(0xa8a2ff, 1, 1000);
+            pointLight.position.set(0, 0, 300);
+            scene.add(pointLight);
+
+            // Mouse Move Listener
+            document.addEventListener('mousemove', onMouseMove);
+
+            // DON'T auto remove loader - wait for user click
+            setTimeout(() => {
+                const loaderText = document.getElementById('loader-text');
+                const clickHint = document.getElementById('click-hint');
+                loaderText.textContent = 'Cánh cổng đã sẵn sàng';
+                clickHint.style.opacity = '1';
+            }, 2000);
+        }
+
+        function createBackgroundStars() {
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const colors = [];
+            
+            for (let i = 0; i < 3000; i++) {
+                vertices.push(
+                    THREE.MathUtils.randFloatSpread(2000),
+                    THREE.MathUtils.randFloatSpread(2000),
+                    THREE.MathUtils.randFloatSpread(2000)
+                );
+                
+                // Varying shades of purple/blue
+                const color = new THREE.Color();
+                color.setHSL(0.7 + Math.random() * 0.1, 0.6, 0.5 + Math.random() * 0.3);
+                colors.push(color.r, color.g, color.b);
+            }
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({ 
+                size: 1.5,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
+            
+            backgroundStars = new THREE.Points(geometry, material);
+            scene.add(backgroundStars);
+        }
+
+        function createEmotionSphere() {
+            const geometry = new THREE.SphereGeometry(1, 32, 32);
+            const particles = [];
+            const particleCount = 1000;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const phi = Math.acos(-1 + (2 * i) / particleCount);
+                const theta = Math.sqrt(particleCount * Math.PI) * phi;
+                
+                const x = 150 * Math.cos(theta) * Math.sin(phi);
+                const y = 150 * Math.sin(theta) * Math.sin(phi);
+                const z = 150 * Math.cos(phi);
+                
+                particles.push(x, y, z);
+            }
+            
+            const particleGeometry = new THREE.BufferGeometry();
+            particleGeometry.setAttribute('position', new THREE.Float32BufferAttribute(particles, 3));
+            
+            const particleMaterial = new THREE.PointsMaterial({
+                color: 0xa8a2ff,
+                size: 2.5,
+                transparent: true,
+                opacity: 0.7,
+                blending: THREE.AdditiveBlending
+            });
+            
+            emotionSphere = new THREE.Points(particleGeometry, particleMaterial);
+            emotionSphere.position.y = -100;
+            scene.add(emotionSphere);
+        }
+
+        function createGalaxyParticles() {
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const colors = [];
+            
+            for (let i = 0; i < 2000; i++) {
+                vertices.push(
+                    THREE.MathUtils.randFloatSpread(1500),
+                    THREE.MathUtils.randFloatSpread(1500),
+                    THREE.MathUtils.randFloatSpread(1500)
+                );
+                
+                const color = new THREE.Color();
+                color.setHSL(0.65 + Math.random() * 0.15, 0.7, 0.6);
+                colors.push(color.r, color.g, color.b);
+            }
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: 2,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending
+            });
+            
+            galaxyParticles = new THREE.Points(geometry, material);
+            scene.add(galaxyParticles);
+        }
+
+        function onMouseMove(event) {
+            targetMouseX = (event.clientX / window.innerWidth) * 2 - 1;
+            targetMouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            // Create particle trail
+            if (Math.random() > 0.7) {
+                createMouseParticle(event.clientX, event.clientY);
+            }
+        }
+
+        function createMouseParticle(x, y) {
+            const particle = document.createElement('div');
+            particle.className = 'particle-trail';
+            particle.style.left = x + 'px';
+            particle.style.top = y + 'px';
+            document.body.appendChild(particle);
+            
+            setTimeout(() => particle.remove(), 1000);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Smooth mouse follow
+            mouseX += (targetMouseX - mouseX) * 0.05;
+            mouseY += (targetMouseY - mouseY) * 0.05;
+            
+            // Rotate background stars slowly
+            if (backgroundStars) {
+                backgroundStars.rotation.y += 0.0002;
+                backgroundStars.rotation.x += 0.0001;
+            }
+            
+            // Animate emotion sphere
+            if (emotionSphere) {
+                emotionSphere.rotation.y += 0.001;
+                emotionSphere.rotation.x = mouseY * 0.3;
+                emotionSphere.position.x = mouseX * 50;
+            }
+            
+            // Animate galaxy particles
+            if (galaxyParticles) {
+                galaxyParticles.rotation.y += 0.0003;
+                galaxyParticles.position.x = mouseX * 30;
+                galaxyParticles.position.y = mouseY * 30;
+            }
+            
+            // Render
+            renderer.render(scene, camera);
+        }
+
+        function startGSAPAnimations() {
+            gsap.registerPlugin(ScrollTrigger);
+            
+            // Scroll Reveal Animations
+            document.querySelectorAll('[data-scroll-reveal]').forEach(el => {
+                const effect = el.getAttribute('data-scroll-reveal');
+                const delay = parseFloat(el.getAttribute('data-delay') || 0);
+                
+                const animConfig = {
+                    scrollTrigger: {
+                        trigger: el,
+                        start: "top 85%",
+                        toggleActions: "play none none reverse"
+                    },
+                    opacity: 0,
+                    duration: 1.2,
+                    delay: delay,
+                    ease: "power3.out"
+                };
+                
+                if (effect === 'fade-up') animConfig.y = 60;
+                if (effect === 'fade-right') animConfig.x = -60;
+                if (effect === 'fade-left') animConfig.x = 60;
+                
+                gsap.from(el, animConfig);
+            });
+            
+            // Parallax Effects
+            gsap.to(camera.position, {
+                scrollTrigger: {
+                    trigger: "body",
+                    start: "top top",
+                    end: "bottom bottom",
+                    scrub: 2
+                },
+                z: 400,
+                ease: "none"
+            });
+            
+            // Section Background Shifts
+            gsap.to('#canvas-container', {
+                scrollTrigger: {
+                    trigger: "#galaxy",
+                    start: "top center",
+                    end: "bottom center",
+                    scrub: 1
+                },
+                backgroundColor: '#0f0f2e'
+            });
+        }
+
+        // Interactive Galaxy Canvas
+        const galaxyCanvas = document.getElementById('galaxy-interactive');
+        let galaxyCtx;
+        
+        if (galaxyCanvas) {
+            const canvas = document.createElement('canvas');
+            canvas.width = galaxyCanvas.offsetWidth;
+            canvas.height = galaxyCanvas.offsetHeight;
+            canvas.style.position = 'absolute';
+            canvas.style.top = '0';
+            canvas.style.left = '0';
+            galaxyCanvas.appendChild(canvas);
+            galaxyCtx = canvas.getContext('2d');
+            
+            const particles2D = [];
+            for (let i = 0; i < 100; i++) {
+                particles2D.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 0.5,
+                    radius: Math.random() * 2 + 1
+                });
+            }
+            
+            galaxyCanvas.addEventListener('mousemove', (e) => {
+                const rect = galaxyCanvas.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+                
+                particles2D.forEach(p => {
+                    const dx = mx - p.x;
+                    const dy = my - p.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 100) {
+                        p.vx += dx * 0.001;
+                        p.vy += dy * 0.001;
+                    }
+                });
+            });
+            
+            function animateGalaxy2D() {
+                galaxyCtx.fillStyle = 'rgba(10, 10, 31, 0.1)';
+                galaxyCtx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                particles2D.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vx *= 0.99;
+                    p.vy *= 0.99;
+                    
+                    if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                    if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+                    
+                    galaxyCtx.beginPath();
+                    galaxyCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    galaxyCtx.fillStyle = 'rgba(168, 162, 255, 0.6)';
+                    galaxyCtx.fill();
+                });
+                
+                requestAnimationFrame(animateGalaxy2D);
+            }
+            
+            animateGalaxy2D();
+        }
+
+        // Form Submission
+        document.getElementById('ritual-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            // Create seal effect
+            const button = e.target.querySelector('.ritual-button');
+            button.textContent = 'Đang Niêm Phong...';
+            button.style.pointerEvents = 'none';
+            
+            setTimeout(() => {
+                button.textContent = '✓ Đã Niêm Phong';
+                button.style.background = 'linear-gradient(135deg, rgba(138, 225, 132, 0.3) 0%, rgba(100, 200, 100, 0.3) 100%)';
+                
+                setTimeout(() => {
+                    button.textContent = 'Niêm Phong';
+                    button.style.pointerEvents = 'auto';
+                    button.style.background = '';
+                    e.target.reset();
+                }, 3000);
+            }, 2000);
+        });
+
+        // Window Resize Handler
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Audio Control
+        const audio = document.getElementById('ambient-audio');
+        const muteToggle = document.getElementById('mute-toggle');
+        const soundIcon = document.getElementById('sound-icon');
+        const muteIcon = document.getElementById('mute-icon');
+        audio.volume = 0.3;
+
+        // Loading Screen Click Handler
+        const loader = document.getElementById('loader');
+        const loaderContent = document.getElementById('loader-content');
+
+        loaderContent.addEventListener('click', function(e) {
+            // Create ripple effect at click position
+            const ripple = document.createElement('div');
+            ripple.className = 'loader-click-effect';
+            ripple.style.left = (e.clientX - 150) + 'px';
+            ripple.style.top = (e.clientY - 150) + 'px';
+            loader.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 1000);
+
+            // Start audio
+            audio.play().then(() => {
+                console.log('🎵 Nhạc đã phát!');
+            }).catch(err => {
+                console.log('⚠️ Audio error:', err);
+            });
+
+            // Animate loader out
+            loaderContent.style.transform = 'scale(1.5)';
+            loaderContent.style.opacity = '0';
+            
+            setTimeout(() => {
+                loader.classList.add('fade-out');
+                setTimeout(() => {
+                    loader.remove();
+                    startGSAPAnimations();
+                }, 800);
+            }, 500);
+        });
+
+        // Mute Toggle
+        muteToggle.addEventListener('click', () => {
+            if (audio.paused) {
+                audio.play();
+                soundIcon.classList.remove('hidden');
+                muteIcon.classList.add('hidden');
+            } else {
+                audio.pause();
+                soundIcon.classList.add('hidden');
+                muteIcon.classList.remove('hidden');
+            }
+        });
+
+        
+
+        // Initialize Everything
+        initThree();
+        animate();
+    </script>
+
+</body>
+</html>

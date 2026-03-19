@@ -416,16 +416,28 @@
             background: radial-gradient(ellipse at 20% 80%, rgba(168, 162, 255, 0.1) 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, rgba(196, 181, 253, 0.08) 0%, transparent 50%), linear-gradient(180deg, rgba(10, 10, 31, 0.9) 0%, rgba(26, 26, 62, 0.9) 100%);
         }
 
+        /* ── TABLET (≤ 1024px) ── */
+        @media (max-width: 1024px) {
+            .confession-sky {
+                height: 420px;
+                border-radius: 20px;
+            }
+        }
+
+        /* ── MOBILE (≤ 768px) ── */
         @media (max-width: 768px) {
             .confession-sky {
-                height: 350px;
+                height: 460px;
                 border-radius: 16px;
+                margin-left: -4px;
+                margin-right: -4px;
             }
         }
 
         @media (max-width: 480px) {
             .confession-sky {
-                height: 300px;
+                height: 420px;
+                border-radius: 12px;
             }
         }
 
@@ -455,12 +467,35 @@
             white-space: nowrap;
         }
 
+        @media (max-width: 1024px) {
+            .sky-hint {
+                font-size: 11px;
+                padding: 9px 16px;
+                max-width: calc(100% - 32px);
+                white-space: normal;
+                text-align: center;
+                line-height: 1.6;
+                letter-spacing: 0.06em;
+            }
+        }
+
         @media (max-width: 768px) {
             .sky-hint {
                 font-size: 10px;
                 padding: 8px 14px;
-                white-space: normal;
-                max-width: calc(100% - 40px);
+                max-width: calc(100% - 24px);
+                top: 14px;
+                /* Split into 2 visual rows via content trick */
+                letter-spacing: 0.05em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .sky-hint {
+                font-size: 9.5px;
+                padding: 7px 12px;
+                top: 12px;
+                letter-spacing: 0.04em;
             }
         }
 
@@ -493,10 +528,37 @@
             white-space: nowrap;
         }
 
+        @media (max-width: 1024px) {
+            .souls-counter {
+                font-size: 13px;
+                padding: 10px 20px;
+                max-width: calc(100% - 32px);
+                white-space: normal;
+                text-align: center;
+                gap: 8px;
+            }
+        }
+
         @media (max-width: 768px) {
             .souls-counter {
                 font-size: 12px;
-                padding: 10px 18px;
+                padding: 9px 16px;
+                bottom: 14px;
+                max-width: calc(100% - 24px);
+                /* Ensure it doesn't overflow */
+                left: 50%;
+                transform: translateX(-50%);
+                width: max-content;
+                max-width: calc(100% - 24px);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .souls-counter {
+                font-size: 11px;
+                padding: 8px 14px;
+                bottom: 12px;
+                gap: 6px;
             }
         }
 
@@ -541,11 +603,46 @@
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
         }
 
+        @media (max-width: 1024px) {
+            .confession-tooltip {
+                max-width: 240px;
+                padding: 16px 20px;
+                font-size: 14px;
+            }
+        }
+
         @media (max-width: 768px) {
             .confession-tooltip {
-                max-width: 220px;
-                padding: 16px 18px;
+                /* On mobile: pin to bottom-center instead of following touch */
+                position: absolute;
+                left: 50% !important;
+                top: auto !important;
+                bottom: 60px;
+                transform: translateX(-50%) translateY(10px);
+                max-width: calc(100% - 32px);
+                width: calc(100% - 32px);
+                padding: 14px 16px;
                 font-size: 13px;
+                text-align: center;
+            }
+
+            .confession-tooltip.visible {
+                transform: translateX(-50%) translateY(0);
+            }
+
+            .confession-tooltip::before {
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 36px;
+                top: -6px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .confession-tooltip {
+                bottom: 56px;
+                font-size: 12px;
+                padding: 12px 14px;
             }
         }
 
@@ -1345,13 +1442,49 @@
                 }
             });
 
-            // Touch support
+            // Touch support — tap to reveal tooltip pinned at bottom on mobile
             container.addEventListener('touchstart', (e) => {
                 if (!e.touches || !e.touches[0]) return;
                 const touch = e.touches[0];
                 const rect = starsCanvas.getBoundingClientRect();
                 confessionMouseX = touch.clientX - rect.left;
                 confessionMouseY = touch.clientY - rect.top;
+
+                // Find nearest star to tap
+                let nearest = null;
+                let nearestDist = Infinity;
+                for (const star of confessionStars) {
+                    const dx = star.x - confessionMouseX;
+                    const dy = star.y - confessionMouseY;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < nearestDist) {
+                        nearestDist = dist;
+                        nearest = star;
+                    }
+                }
+
+                const isMobile = window.innerWidth <= 1024;
+                if (nearest && nearestDist < (isMobile ? 60 : 30)) {
+                    hoveredStar = nearest;
+                    tooltipText.textContent = nearest.confession.text;
+                    tooltipEmotion.textContent = nearest.confession.emotion;
+                    tooltip.classList.add('visible');
+                    if (!isMobile) {
+                        tooltip.style.left = confessionMouseX + 20 + 'px';
+                        tooltip.style.top = confessionMouseY - 10 + 'px';
+                    }
+                    // Auto-hide after 3s on mobile
+                    if (isMobile) {
+                        clearTimeout(container._tooltipTimer);
+                        container._tooltipTimer = setTimeout(() => {
+                            tooltip.classList.remove('visible');
+                            hoveredStar = null;
+                        }, 3000);
+                    }
+                } else if (isMobile) {
+                    tooltip.classList.remove('visible');
+                    hoveredStar = null;
+                }
             }, { passive: true });
 
             animateConfessionSky();
